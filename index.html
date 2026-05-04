@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>3D Snake Game</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #000 70%);
+            color: white;
+            font-family: 'Trebuchet MS', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            user-select: none;
+        }
+
+        h1.title {
+            margin: 0 0 8px 0;
+            font-size: 26px;
+            letter-spacing: 6px;
+            color: #d4ff77;
+            text-shadow: 0 0 12px rgba(160, 255, 100, 0.5);
+        }
+
+        #gamePrompt {
+            margin: 6px 0 14px 0;
+            font-size: 18px;
+            min-height: 24px;
+            color: #fff;
+        }
+
+        #scoreBoard {
+            display: flex;
+            justify-content: space-between;
+            width: 600px;
+            margin-bottom: 12px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #scoreBoard span { color: #d4ff77; }
+        #bestSection { color: #ffb74d; }
+
+        #gameArea {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        #canvasWrap {
+            position: relative;
+            width: 600px;
+            height: 600px;
+        }
+
+        canvas {
+            border: 2px solid #555;
+            border-radius: 6px;
+            box-shadow: 0 0 30px rgba(0, 255, 100, 0.15);
+            display: block;
+        }
+
+        /* ---------- Overlay ---------- */
+        #overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(3px);
+            border-radius: 6px;
+            text-align: center;
+            transition: opacity 0.35s ease;
+            pointer-events: none;
+        }
+        #overlay.hidden { opacity: 0; visibility: hidden; }
+        #overlayTitle {
+            margin: 0;
+            font-size: 64px;
+            letter-spacing: 6px;
+            font-weight: 900;
+            text-shadow: 0 0 18px currentColor;
+        }
+        #overlaySubtitle {
+            margin: 16px 0 0 0;
+            font-size: 18px;
+            color: #ddd;
+        }
+        #overlayHint {
+            margin-top: 24px;
+            font-size: 14px;
+            color: #aaa;
+            letter-spacing: 1px;
+        }
+        .pulse { animation: pulse 1.4s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.55; transform: scale(0.98); }
+        }
+        .state-start  #overlayTitle { color: #d4ff77; }
+        .state-pause  #overlayTitle { color: #ffe066; }
+        .state-lose   #overlayTitle { color: #ff6b6b; }
+
+        /* ---------- Side panel ---------- */
+        #instructions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 320px;
+        }
+        .panel {
+            font-size: 14px;
+            line-height: 1.55;
+            padding: 12px 14px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: rgba(20, 20, 30, 0.6);
+        }
+        .panel h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #d4ff77;
+            letter-spacing: 1px;
+        }
+        .panel kbd {
+            background: #333;
+            border-radius: 3px;
+            padding: 1px 6px;
+            font-size: 12px;
+            font-family: monospace;
+            border: 1px solid #555;
+        }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .row label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+        .row label:hover { background: rgba(255,255,255,0.05); }
+        .row input[type="radio"] { cursor: pointer; }
+        .row input[type="radio"]:disabled + span { color: #666; }
+
+        #soundBtn {
+            background: #2a2a3e;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: background 0.15s;
+        }
+        #soundBtn:hover { background: #3a3a55; }
+
+        .footer-tip {
+            margin-top: 16px;
+            color: #666;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+
+<body onload="main()">
+    <h1 class="title">🐍 3D&nbsp;&nbsp;S N A K E</h1>
+    <div id="gamePrompt">Loading...</div>
+    <div id="scoreBoard">
+        <div>SCORE&nbsp;&nbsp;<span id="score">0</span></div>
+        <div id="bestSection">BEST&nbsp;&nbsp;<span id="best">0</span></div>
+    </div>
+
+    <div id="gameArea">
+        <div id="canvasWrap">
+            <canvas id="webgl" width="600" height="600">
+                Please use a browser that supports "canvas".
+            </canvas>
+            <div id="overlay" class="state-start">
+                <h1 id="overlayTitle" class="pulse">3D SNAKE</h1>
+                <p id="overlaySubtitle">Press <b>ENTER</b> to start</p>
+                <p id="overlayHint">Arrow Keys to control · R to switch view · P to pause</p>
+            </div>
+        </div>
+
+        <div id="instructions">
+            <div class="panel">
+                <h3>🕹️ CONTROLS</h3>
+                <div><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> Turn the snake</div>
+                <div><kbd>W</kbd> / <kbd>S</kbd> Zoom (3rd-person)</div>
+                <div><kbd>Mouse Drag</kbd> Rotate camera (3rd-person)</div>
+                <div><kbd>R</kbd> Toggle 1st / 3rd person</div>
+                <div><kbd>Enter</kbd> Start &nbsp; <kbd>P</kbd> Pause</div>
+            </div>
+
+            <div class="panel">
+                <h3>⚙️ SETTINGS</h3>
+                <div style="margin-bottom: 8px;">
+                    <b>Difficulty:</b>
+                    <div class="row">
+                        <label><input type="radio" name="difficulty" value="easy"><span>Easy</span></label>
+                        <label><input type="radio" name="difficulty" value="normal" checked><span>Normal</span></label>
+                        <label><input type="radio" name="difficulty" value="hard"><span>Hard</span></label>
+                    </div>
+                </div>
+                <div>
+                    <b>Sound:</b>
+                    <button id="soundBtn">🔊 ON</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>🍎 FOOD MODELS</h3>
+                <div style="font-size:12px;color:#aaa;margin-bottom:6px;">Unlock by reaching score</div>
+                <div class="row" id="foodSelector">
+                    <label><input type="radio" name="foodModel" value="apple" checked><span>🍎 Apple (0)</span></label>
+                    <label><input type="radio" name="foodModel" value="orange" disabled><span>🍊 Orange (5)</span></label>
+                    <label><input type="radio" name="foodModel" value="grape" disabled><span>🍇 Grape (10)</span></label>
+                    <label><input type="radio" name="foodModel" value="lemon" disabled><span>🍋 Lemon (20)</span></label>
+                    <label><input type="radio" name="foodModel" value="melon" disabled><span>🍈 Melon (30)</span></label>
+                    <label><input type="radio" name="foodModel" value="peach" disabled><span>🍑 Peach (50)</span></label>
+                </div>
+            </div>
+
+            <div class="panel" style="font-size:12px;color:#888;">
+                <h3 style="color:#ffd866;">✨ Tip</h3>
+                Watch out for the <span style="color:#ffd866;">★ Golden Bonus</span> — eat it for +5 score and a fancy burst.
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-tip">WebGL · Computer Graphics Final Project · 2026</div>
+
+    <script src="cuon-matrix.js"></script>
+    <script src="WebGL.js"></script>
+</body>
+</html>

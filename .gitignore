@@ -1,0 +1,16 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+__MACOSX/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Node
+node_modules/
+
+# Logs
+*.log
